@@ -1,0 +1,111 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Frequência Escolar — pré-visualização</title>
+<style>
+:root{--bg:#fff;--fg:#1c1c1e;--mut:#6b6b70;--card:#f6f6f8;--bd:#dcdce0;--ok:#2E7D32;--fa:#C62828;--ju:#F9A825;--ac:#d4501e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1117;--fg:#fafafa;--mut:#a3a8b4;--card:#1a1d25;--bd:#2d313c}}
+:root[data-theme="dark"]{--bg:#0e1117;--fg:#fafafa;--mut:#a3a8b4;--card:#1a1d25;--bd:#2d313c}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1000px;margin:0 auto;padding:16px 12px 48px}
+h1{font-size:1.6rem;margin:.2rem 0 .6rem}h3{margin:1rem 0 .5rem}
+.note{background:var(--card);border:1px solid var(--bd);border-left:4px solid var(--ju);padding:8px 12px;border-radius:8px;font-size:.85rem;color:var(--mut)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--bd);margin:14px 0}
+.tabs button{background:none;border:0;border-bottom:3px solid transparent;color:var(--mut);padding:10px 12px;font:inherit;cursor:pointer}
+.tabs button.on{color:var(--fg);border-color:var(--fa);font-weight:600}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;margin:8px 0}
+.opts{display:flex;flex-wrap:wrap;gap:4px 16px;margin:6px 0}
+.opts label{cursor:pointer}
+input[type=text],input[type=date]{width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit}
+.btn{width:100%;padding:12px;border:0;border-radius:8px;background:var(--fa);color:#fff;font:600 1rem inherit;cursor:pointer;margin-top:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.m b{display:block;font-size:1.7rem}.m span{color:var(--mut);font-size:.85rem}
+.alert{background:#c628281f;border:1px solid var(--fa);border-radius:10px;padding:10px 14px}
+.alert ul{margin:6px 0 0;padding-left:20px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.bar{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:.85rem}
+.bar .n{width:120px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bar .t{flex:1;display:flex;height:20px;background:var(--bd);border-radius:4px;overflow:hidden}
+.bar .t i{display:block;height:100%}.bar .v{width:22px;text-align:right}
+.donut{width:200px;height:200px;border-radius:50%;margin:8px auto;display:grid;place-items:center}
+.donut div{width:110px;height:110px;border-radius:50%;background:var(--bg);display:grid;place-items:center;font-weight:700}
+.leg{display:flex;flex-wrap:wrap;gap:4px 14px;justify-content:center;font-size:.85rem}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
+.scroll{overflow-x:auto;border:1px solid var(--bd);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:.82rem;white-space:nowrap}
+th,td{padding:6px 9px;text-align:left;border-bottom:1px solid var(--bd)}th{background:var(--card)}
+tr.r td{background:#c628281a}
+.hide{display:none}
+</style></head><body><main>
+<h1>📋 Frequência Escolar</h1>
+<div class="note">Pré-visualização estática com a lista de alunos do arquivo (5º Ano B – Tarde, 29 alunos, dados fictícios). O Dashboard usa <b>presenças simuladas</b> calculadas pelo <code>analise.py</code>. O app roda com <code>streamlit run app.py</code>.</div>
+<div class="tabs"><button class="on" data-t="c">📋 Chamada</button><button data-t="d">📊 Dashboard</button><button data-t="a">👥 Alunos</button></div>
+
+<section id="c">
+<label>Data da chamada<input type="date" id="dt"></label>
+<details class="card"><summary>➕ Adicionar aluno (entrou no meio do ano)</summary>
+<p><input type="text" id="nn" placeholder="Nome do aluno"></p><p><input type="text" id="nc" placeholder="Contato (telefone/WhatsApp com DDD)"></p><button class="btn" id="add" style="background:var(--ac)">Adicionar aluno</button></details>
+<p style="color:var(--mut);font-size:.85rem" id="cnt"></p>
+<div id="list"></div>
+<button class="btn" id="save">💾 Salvar frequência do dia</button>
+<p id="msg" style="color:var(--ok);font-weight:600"></p>
+</section>
+
+<section id="d" class="hide"></section>
+<section id="a" class="hide"></section>
+
+<script>
+const D={"dias": 15, "alunos": 29, "presenca": 82.5, "abaixo": 9, "dist": [{"status": "Presente", "total": 359}, {"status": "Falta", "total": 36}, {"status": "Falta Justificada", "total": 40}], "roster": [{"nome": "Ana Gabriela Alves de Jesus", "contato": "919825211", "wa": ""}, {"nome": "Anna Clara Ribeiro da Silva", "contato": "(91) 98274-8035", "wa": "https://wa.me/5591982748035"}, {"nome": "Ayla Fernanda Araujo Ferreira", "contato": "(91) 98255-7958", "wa": "https://wa.me/5591982557958"}, {"nome": "Caan Eduardo Corrêa dos Santos", "contato": "(91) 98021-9731", "wa": "https://wa.me/5591980219731"}, {"nome": "Carlyson Davi de Araujo Liborio", "contato": "(91) 98206-2218", "wa": "https://wa.me/5591982062218"}, {"nome": "Emily Vitória dos Santos Cardoso", "contato": "(91) 99816-2041", "wa": "https://wa.me/5591998162041"}, {"nome": "Esteffany Wendy Pereira do Rosario", "contato": "(91) 99149-8428", "wa": "https://wa.me/5591991498428"}, {"nome": "Esther Gabrielly Viana da Silva", "contato": "919829949696", "wa": ""}, {"nome": "Evelin Kathleia da Silva Baia", "contato": "(91) 99615-7149", "wa": "https://wa.me/5591996157149"}, {"nome": "Evelyn Andressa dos Santos dos Santos", "contato": "(91) 98550-8716", "wa": "https://wa.me/5591985508716"}, {"nome": "Fernando Gabryel da Costa dos Santos", "contato": "(91) 99140-5039", "wa": "https://wa.me/5591991405039"}, {"nome": "Genison Ribeiro Sodré", "contato": "(91) 98139-5864", "wa": "https://wa.me/5591981395864"}, {"nome": "Isaac Pedrosa e Silva", "contato": "(91) 92003-6949", "wa": "https://wa.me/5591920036949"}, {"nome": "Italo Ramon Martins da Silva", "contato": "(91) 98120-9880", "wa": "https://wa.me/5591981209880"}, {"nome": "Ivan David Silva Campos", "contato": "(91) 99274-9728", "wa": "https://wa.me/5591992749728"}, {"nome": "Jackson Miqueias Soares Ribeiro", "contato": "(91) 98613-2093", "wa": "https://wa.me/5591986132093"}, {"nome": "Jhon Kaio Franco Araujo", "contato": "(91) 98016-5981", "wa": "https://wa.me/5591980165981"}, {"nome": "João Miguel de Oliveira Corrêa", "contato": "(91) 98819-1941", "wa": "https://wa.me/5591988191941"}, {"nome": "Juliany Vitória da Conceição Trindade", "contato": "(91) 98818-1690", "wa": "https://wa.me/5591988181690"}, {"nome": "Lara Carolina Mendes de Freitas Sousa", "contato": "(91) 98748-5150", "wa": "https://wa.me/5591987485150"}, {"nome": "Lohanna Karolayne Ribeiro Conceição", "contato": "(91) 98191-5673", "wa": "https://wa.me/5591981915673"}, {"nome": "Luiz Guilherme Lima de Souza", "contato": "(91) 98157-6056", "wa": "https://wa.me/5591981576056"}, {"nome": "Maiza Lima Baia", "contato": "(91) 99822-7964", "wa": "https://wa.me/5591998227964"}, {"nome": "Maria Manuel de Araujo Azevedo", "contato": "(91) 98255-3090", "wa": "https://wa.me/5591982553090"}, {"nome": "Matheus da Costa Pereira", "contato": "(91) 98637-6547", "wa": "https://wa.me/5591986376547"}, {"nome": "Rogério Tomaz Favacho Santos", "contato": "(91) 99273-0330", "wa": "https://wa.me/5591992730330"}, {"nome": "Thaila Emanuele da Silva Costa", "contato": "(91) 98178-0685", "wa": "https://wa.me/5591981780685"}, {"nome": "Thiago Kayc Ferreira Santos", "contato": "(91) 98138-8468", "wa": "https://wa.me/5591981388468"}, {"nome": "William Samuel Reis de Matos", "contato": "(91) 98131-2131", "wa": "https://wa.me/5591981312131"}], "rows": [{"nome": "Lohanna Karolayne Ribeiro Conceição", "curto": "Lohanna Karolayne", "contato": "(91) 98191-5673", "wa": "https://wa.me/5591981915673", "dias": 15, "presencas": 10, "faltas": 5, "justificadas": 0, "seq_max": 2, "pct_faltas": 33.3, "pct_presenca": 66.7, "risco": true, "motivo": "33% de faltas"}, {"nome": "Caan Eduardo Corrêa dos Santos", "curto": "Caan Eduardo", "contato": "(91) 98021-9731", "wa": "https://wa.me/5591980219731", "dias": 15, "presencas": 11, "faltas": 3, "justificadas": 1, "seq_max": 3, "pct_faltas": 20.0, "pct_presenca": 73.3, "risco": true, "motivo": "3 faltas seguidas"}, {"nome": "Esther Gabrielly Viana da Silva", "curto": "Esther Gabrielly", "contato": "919829949696", "wa": "", "dias": 15, "presencas": 9, "faltas": 4, "justificadas": 2, "seq_max": 1, "pct_faltas": 26.7, "pct_presenca": 60.0, "risco": false, "motivo": ""}, {"nome": "Emily Vitória dos Santos Cardoso", "curto": "Emily Vitória", "contato": "(91) 99816-2041", "wa": "https://wa.me/5591998162041", "dias": 15, "presencas": 11, "faltas": 3, "justificadas": 1, "seq_max": 1, "pct_faltas": 20.0, "pct_presenca": 73.3, "risco": false, "motivo": ""}, {"nome": "Luiz Guilherme Lima de Souza", "curto": "Luiz Guilherme", "contato": "(91) 98157-6056", "wa": "https://wa.me/5591981576056", "dias": 15, "presencas": 10, "faltas": 3, "justificadas": 2, "seq_max": 1, "pct_faltas": 20.0, "pct_presenca": 66.7, "risco": false, "motivo": ""}, {"nome": "Evelyn Andressa dos Santos dos Santos", "curto": "Evelyn Andressa", "contato": "(91) 98550-8716", "wa": "https://wa.me/5591985508716", "dias": 15, "presencas": 12, "faltas": 2, "justificadas": 1, "seq_max": 1, "pct_faltas": 13.3, "pct_presenca": 80.0, "risco": false, "motivo": ""}, {"nome": "João Miguel de Oliveira Corrêa", "curto": "João Miguel", "contato": "(91) 98819-1941", "wa": "https://wa.me/5591988191941", "dias": 15, "presencas": 10, "faltas": 2, "justificadas": 3, "seq_max": 2, "pct_faltas": 13.3, "pct_presenca": 66.7, "risco": false, "motivo": ""}, {"nome": "Maiza Lima Baia", "curto": "Maiza Lima", "contato": "(91) 99822-7964", "wa": "https://wa.me/5591998227964", "dias": 15, "presencas": 12, "faltas": 2, "justificadas": 1, "seq_max": 1, "pct_faltas": 13.3, "pct_presenca": 80.0, "risco": false, "motivo": ""}, {"nome": "Ana Gabriela Alves de Jesus", "curto": "Ana Gabriela", "contato": "919825211", "wa": "", "dias": 15, "presencas": 14, "faltas": 1, "justificadas": 0, "seq_max": 1, "pct_faltas": 6.7, "pct_presenca": 93.3, "risco": false, "motivo": ""}, {"nome": "Ayla Fernanda Araujo Ferreira", "curto": "Ayla Fernanda", "contato": "(91) 98255-7958", "wa": "https://wa.me/5591982557958", "dias": 15, "presencas": 13, "faltas": 1, "justificadas": 1, "seq_max": 1, "pct_faltas": 6.7, "pct_presenca": 86.7, "risco": false, "motivo": ""}, {"nome": "Esteffany Wendy Pereira do Rosario", "curto": "Esteffany Wendy", "contato": "(91) 99149-8428", "wa": "https://wa.me/5591991498428", "dias": 15, "presencas": 12, "faltas": 1, "justificadas": 2, "seq_max": 1, "pct_faltas": 6.7, "pct_presenca": 80.0, "risco": false, "motivo": ""}, {"nome": "Evelin Kathleia da Silva Baia", "curto": "Evelin Kathleia", "contato": "(91) 99615-7149", "wa": "https://wa.me/5591996157149", "dias": 15, "presencas": 13, "faltas": 1, "justificadas": 1, "seq_max": 1, "pct_faltas": 6.7, "pct_presenca": 86.7, "risco": false, "motivo": ""}, {"nome": "Genison Ribeiro Sodré", "curto": "Genison Ribeiro", "contato": "(91) 98139-5864", "wa": "https://wa.me/5591981395864", "dias": 15, "presencas": 13, "faltas": 1, "justificadas": 1, "seq_max": 1, "pct_faltas": 6.7, "pct_presenca": 86.7, "risco": false, "motivo": ""}, {"nome": "Isaac Pedrosa e Silva", "curto": "Isaac Pedrosa", "contato": "(91) 92003-6949", "wa": "https://wa.me/5591920036949", "dias": 15, "presencas": 13, "faltas": 1, "justificadas": 1, "seq_max": 1, "pct_faltas": 6.7, "pct_presenca": 86.7, "risco": false, "motivo": ""}, {"nome": "Italo Ramon Martins da Silva", "curto": "Italo Ramon", "contato": "(91) 98120-9880", "wa": "https://wa.me/5591981209880", "dias": 15, "presencas": 10, "faltas": 1, "justificadas": 4, "seq_max": 1, "pct_faltas": 6.7, "pct_presenca": 66.7, "risco": false, "motivo": ""}, {"nome": "Jackson Miqueias Soares Ribeiro", "curto": "Jackson Miqueias", "contato": "(91) 98613-2093", "wa": "https://wa.me/5591986132093", "dias": 15, "presencas": 13, "faltas": 1, "justificadas": 1, "seq_max": 1, "pct_faltas": 6.7, "pct_presenca": 86.7, "risco": false, "motivo": ""}, {"nome": "Lara Carolina Mendes de Freitas Sousa", "curto": "Lara Carolina", "contato": "(91) 98748-5150", "wa": "https://wa.me/5591987485150", "dias": 15, "presencas": 14, "faltas": 1, "justificadas": 0, "seq_max": 1, "pct_faltas": 6.7, "pct_presenca": 93.3, "risco": false, "motivo": ""}, {"nome": "Maria Manuel de Araujo Azevedo", "curto": "Maria Manuel", "contato": "(91) 98255-3090", "wa": "https://wa.me/5591982553090", "dias": 15, "presencas": 9, "faltas": 1, "justificadas": 5, "seq_max": 1, "pct_faltas": 6.7, "pct_presenca": 60.0, "risco": false, "motivo": ""}, {"nome": "Thaila Emanuele da Silva Costa", "curto": "Thaila Emanuele", "contato": "(91) 98178-0685", "wa": "https://wa.me/5591981780685", "dias": 15, "presencas": 13, "faltas": 1, "justificadas": 1, "seq_max": 1, "pct_faltas": 6.7, "pct_presenca": 86.7, "risco": false, "motivo": ""}, {"nome": "Thiago Kayc Ferreira Santos", "curto": "Thiago Kayc", "contato": "(91) 98138-8468", "wa": "https://wa.me/5591981388468", "dias": 15, "presencas": 14, "faltas": 1, "justificadas": 0, "seq_max": 1, "pct_faltas": 6.7, "pct_presenca": 93.3, "risco": false, "motivo": ""}, {"nome": "Anna Clara Ribeiro da Silva", "curto": "Anna Clara", "contato": "(91) 98274-8035", "wa": "https://wa.me/5591982748035", "dias": 15, "presencas": 14, "faltas": 0, "justificadas": 1, "seq_max": 0, "pct_faltas": 0.0, "pct_presenca": 93.3, "risco": false, "motivo": ""}, {"nome": "Carlyson Davi de Araujo Liborio", "curto": "Carlyson Davi", "contato": "(91) 98206-2218", "wa": "https://wa.me/5591982062218", "dias": 15, "presencas": 13, "faltas": 0, "justificadas": 2, "seq_max": 0, "pct_faltas": 0.0, "pct_presenca": 86.7, "risco": false, "motivo": ""}, {"nome": "Fernando Gabryel da Costa dos Santos", "curto": "Fernando Gabryel", "contato": "(91) 99140-5039", "wa": "https://wa.me/5591991405039", "dias": 15, "presencas": 14, "faltas": 0, "justificadas": 1, "seq_max": 0, "pct_faltas": 0.0, "pct_presenca": 93.3, "risco": false, "motivo": ""}, {"nome": "Ivan David Silva Campos", "curto": "Ivan David", "contato": "(91) 99274-9728", "wa": "https://wa.me/5591992749728", "dias": 15, "presencas": 11, "faltas": 0, "justificadas": 4, "seq_max": 0, "pct_faltas": 0.0, "pct_presenca": 73.3, "risco": false, "motivo": ""}, {"nome": "Jhon Kaio Franco Araujo", "curto": "Jhon Kaio", "contato": "(91) 98016-5981", "wa": "https://wa.me/5591980165981", "dias": 15, "presencas": 14, "faltas": 0, "justificadas": 1, "seq_max": 0, "pct_faltas": 0.0, "pct_presenca": 93.3, "risco": false, "motivo": ""}, {"nome": "Juliany Vitória da Conceição Trindade", "curto": "Juliany Vitória", "contato": "(91) 98818-1690", "wa": "https://wa.me/5591988181690", "dias": 15, "presencas": 13, "faltas": 0, "justificadas": 2, "seq_max": 0, "pct_faltas": 0.0, "pct_presenca": 86.7, "risco": false, "motivo": ""}, {"nome": "Matheus da Costa Pereira", "curto": "Matheus da", "contato": "(91) 98637-6547", "wa": "https://wa.me/5591986376547", "dias": 15, "presencas": 14, "faltas": 0, "justificadas": 1, "seq_max": 0, "pct_faltas": 0.0, "pct_presenca": 93.3, "risco": false, "motivo": ""}, {"nome": "Rogério Tomaz Favacho Santos", "curto": "Rogério Tomaz", "contato": "(91) 99273-0330", "wa": "https://wa.me/5591992730330", "dias": 15, "presencas": 15, "faltas": 0, "justificadas": 0, "seq_max": 0, "pct_faltas": 0.0, "pct_presenca": 100.0, "risco": false, "motivo": ""}, {"nome": "William Samuel Reis de Matos", "curto": "William Samuel", "contato": "(91) 98131-2131", "wa": "https://wa.me/5591981312131", "dias": 15, "presencas": 15, "faltas": 0, "justificadas": 0, "seq_max": 0, "pct_faltas": 0.0, "pct_presenca": 100.0, "risco": false, "motivo": ""}]};
+const C={Presente:'var(--ok)',Falta:'var(--fa)','Falta Justificada':'var(--ju)'};
+document.getElementById('dt').valueAsDate=new Date();
+const ctt=n=>n.contato?'📞 '+n.contato+(n.wa?' · <a href="'+n.wa+'" target="_blank" rel="noopener">WhatsApp</a>':' · ⚠️ conferir número'):'📞 sem contato';
+const fmtc=d=>d.length==11?'('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7):d.length==10?'('+d.slice(0,2)+') '+d.slice(2,6)+'-'+d.slice(6):d;
+let alunos=D.roster.slice(0,6);
+function lista(){
+  document.getElementById('cnt').textContent=alunos.length+' alunos exibidos nesta prévia (o app mostra todos os '+D.roster.length+') · Padrão: Presente';
+  document.getElementById('list').innerHTML=alunos.map((n,i)=>`<div class="card"><b>${n.nome}</b> · 5º Ano B (Tarde)<br><small>${ctt(n)}</small>
+  <div class="opts">${['Presente','Falta','Falta Justificada'].map((s,j)=>`<label><input type="radio" name="a${i}" ${j==0?'checked':''}> ${s}</label>`).join('')}</div>
+  <input type="text" placeholder="Observação (opcional)"></div>`).join('');
+}
+lista();
+document.getElementById('add').onclick=()=>{const v=document.getElementById('nn').value.trim();if(!v)return;const dg=document.getElementById('nc').value.replace(/\D/g,'');const novo={nome:v,contato:fmtc(dg),wa:(dg.length==10||dg.length==11)?'https://wa.me/55'+dg:''};document.getElementById('nc').value='';alunos.push(novo);todos.push(novo);listaA();document.getElementById('nn').value='';lista();document.getElementById('msg').textContent='Aluno '+v+' adicionado!';};
+document.getElementById('save').onclick=()=>{document.getElementById('msg').textContent='Frequência salva ('+alunos.length+' alunos) — simulação, nada é gravado nesta prévia.';};
+
+let todos=D.roster.slice();
+function listaA(){
+  document.getElementById('a').innerHTML=`<h3>Alunos cadastrados (${todos.length})</h3>
+  <div class="scroll"><table><tr><th>Nº</th><th>Aluno</th><th>Contato</th><th>Turma</th><th>Entrada</th></tr>
+  ${todos.map((n,i)=>`<tr><td>${i+1}</td><td>${n.nome}</td><td>${ctt(n)}</td><td>5º Ano B (Tarde)</td><td>01/01/2026</td></tr>`).join('')}</table></div>
+  <div class="card" style="margin-top:12px"><b>📥 Importar lista da turma (.xlsx ou .csv)</b><br><span style="color:var(--mut);font-size:.85rem">No app, envie a planilha com a coluna “NOME DO ALUNO”: ele mostra quem ainda não está cadastrado e importa só os nomes (nascimento e contato são ignorados).</span></div>`;
+}
+listaA();
+function dash(){
+  const risco=D.rows.filter(r=>r.risco);
+  const top=D.rows.map(r=>({...r,t:r.faltas+r.justificadas})).filter(r=>r.t>0).sort((a,b)=>b.t-a.t).slice(0,10);
+  const mx=Math.max(...top.map(r=>r.t));
+  const tot=D.dist.reduce((s,x)=>s+x.total,0);let acc=0;
+  const seg=D.dist.map(x=>{const a=acc/tot*100;acc+=x.total;return `${C[x.status]} ${a}% ${acc/tot*100}%`}).join(',');
+  document.getElementById('d').innerHTML=`
+  <h3>Dashboard de Evasão</h3><div class="alert" style="margin:8px 0;background:#f9a8251f;border-color:var(--ju)">⚠️ <b>Presenças simuladas</b> para demonstração, geradas com a lista de alunos do arquivo.</div>
+  <div class="card"><b>${D.dias} de 15 dias lançados</b></div>
+  <div class="grid">
+   <div class="card m"><b>${D.alunos}</b><span>Alunos</span></div>
+   <div class="card m"><b>🚨 ${risco.length}</b><span>Em risco</span></div>
+   <div class="card m"><b>${D.presenca}%</b><span>Presença geral</span></div>
+   <div class="card m"><b>${D.abaixo}</b><span>Abaixo de 75% (LDB)</span></div></div>
+  <div class="alert" style="margin:12px 0">🚨 <b>RISCO DE EVASÃO</b> (${risco.length} aluno(s))<ul>${risco.map(r=>`<li><b>${r.nome}</b> — ${r.motivo} · ${ctt(r)}</li>`).join('')}</ul></div>
+  <div class="two"><div><b>Top 10 — quem mais faltou</b>
+   ${top.map(r=>`<div class="bar"><span class="n" title="${r.nome}">${r.curto}</span><span class="t"><i style="width:${r.faltas/mx*100}%;background:var(--fa)"></i><i style="width:${r.justificadas/mx*100}%;background:var(--ju)"></i></span><span class="v">${r.t}</span></div>`).join('')}
+   <div class="leg" style="margin-top:6px"><span><i style="background:var(--fa)"></i>Falta</span><span><i style="background:var(--ju)"></i>Falta Justificada</span></div></div>
+  <div><b>Presente × Falta × Justificada</b>
+   <div class="donut" style="background:conic-gradient(${seg})"><div>${tot}</div></div>
+   <div class="leg">${D.dist.map(x=>`<span><i style="background:${C[x.status]}"></i>${x.status}: ${x.total}</span>`).join('')}</div></div></div>
+  <h3>Detalhe por aluno</h3><div class="scroll"><table><tr><th>Situação</th><th>Aluno</th><th>Contato</th><th>Dias</th><th>Faltas</th><th>Just.</th><th>Máx. seguidas</th><th>% faltas</th><th>% presença</th><th>Motivo</th></tr>
+  ${D.rows.map(r=>`<tr class="${r.risco?'r':''}"><td>${r.risco?'🚨 Risco':'✅ OK'}</td><td>${r.nome}</td><td>${r.contato||'—'}</td><td>${r.dias}</td><td>${r.faltas}</td><td>${r.justificadas}</td><td>${r.seq_max}</td><td>${r.pct_faltas}</td><td>${r.pct_presenca}</td><td>${r.motivo}</td></tr>`).join('')}</table></div>
+  <p style="color:var(--mut);font-size:.8rem">Referência pública: LDB (Lei 9.394/1996) art. 24, VI — frequência mínima de 75% — e art. 12, VIII (Lei 13.803/2019).</p>`;
+}
+dash();
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  ['c','d','a'].forEach(id=>document.getElementById(id).classList.toggle('hide',id!==b.dataset.t));
+});
+</script></main></body></html>
