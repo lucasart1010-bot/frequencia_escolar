@@ -4,6 +4,7 @@ Rodar local:  streamlit run app.py
 Sem credenciais do Supabase o app abre em MODO DEMONSTRAÇÃO (dados em memória).
 """
 import hmac
+from html import escape
 import random
 from datetime import date, timedelta
 from pathlib import Path
@@ -20,7 +21,6 @@ from importar import contato_valido, formatar_contato, ler_planilha_alunos, link
 # ----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Frequência Escolar",
-    page_icon="📋",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -28,12 +28,50 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    .block-container {max-width: 1100px; padding: 1.2rem 0.9rem 4rem 0.9rem;}
+    :root {
+        --fundo: #F6F5F1; --cartao: #FFFFFF; --borda: #E3E0D8; --texto: #26332F;
+        --suave: #6B7770; --verde: #2F6B6B; --ok: #4C8C6B; --falta: #B5574B; --just: #C9A04A;
+    }
+    .block-container {max-width: 1000px; padding: 1.4rem 1rem 4rem 1rem;}
+    footer, #MainMenu {visibility: hidden;}
+    html, body, [class*="css"] {font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;}
+
+    /* cabeçalho */
+    .topo {border-bottom: 1px solid var(--borda); padding: .2rem 0 .9rem 0; margin-bottom: 1rem;}
+    .topo h1 {font-size: 1.7rem; font-weight: 650; margin: 0; padding: 0; color: var(--texto); letter-spacing: -.01em;}
+    .topo p {margin: .15rem 0 0 0; color: var(--suave); font-size: .92rem;}
+
+    /* abas */
+    button[data-baseweb="tab"] {font-weight: 500; padding: .6rem 1rem;}
+    div[data-baseweb="tab-list"] {gap: .2rem;}
+
+    /* cartões */
+    div[data-testid="stVerticalBlockBorderWrapper"] {border-radius: 12px; border-color: var(--borda); background: var(--cartao);}
+    div[data-testid="stExpander"] {border-radius: 12px; border-color: var(--borda); background: var(--cartao);}
+    div[data-testid="stMetric"] {background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px; padding: .8rem 1rem;}
+    div[data-testid="stMetricLabel"] {color: var(--suave);}
+    div[data-testid="stMetricValue"] {font-weight: 650;}
+    div[data-testid="stDataFrame"] {border: 1px solid var(--borda); border-radius: 12px; overflow: hidden;}
+
+    /* botões e campos */
+    button[kind="primary"], button[kind="secondary"], div[data-testid="stDownloadButton"] button {min-height: 2.8rem; border-radius: 10px; font-weight: 550;}
+    div[data-baseweb="input"], div[data-baseweb="base-input"] {border-radius: 10px;}
     div[role="radiogroup"] {flex-wrap: wrap; gap: .3rem .9rem;}
-    button[kind="primary"], button[kind="secondary"] {min-height: 2.8rem;}
+
+    /* avisos próprios (suaves, sem emoji) */
+    .alerta {background: #FBF3F1; border: 1px solid #EBD3CE; border-left: 4px solid var(--falta);
+             border-radius: 12px; padding: .9rem 1.1rem; margin: .6rem 0 1.1rem 0; color: #4F2B26;}
+    .alerta b.t {display: block; font-size: 1rem; margin-bottom: .35rem;}
+    .alerta ul {margin: .2rem 0 0 0; padding-left: 1.1rem;}
+    .alerta li {margin: .25rem 0;}
+    .alerta a {color: var(--verde); font-weight: 600;}
+    .tudo-bem {background: #F0F6F2; border: 1px solid #D5E5DB; border-left: 4px solid var(--ok);
+               border-radius: 12px; padding: .8rem 1.1rem; margin: .6rem 0 1.1rem 0; color: #26402F;}
+    .secao {font-weight: 600; margin: 1.1rem 0 .3rem 0; color: var(--texto);}
+
     @media (max-width: 640px) {
-        h1 {font-size: 1.6rem !important;}
-        h2, h3 {font-size: 1.2rem !important;}
+        .topo h1 {font-size: 1.4rem;}
+        h2, h3 {font-size: 1.15rem !important;}
         .block-container {padding-left: .6rem; padding-right: .6rem;}
     }
     </style>
@@ -41,10 +79,27 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
+def cabecalho(sub: str = "") -> None:
+    st.markdown(
+        f'<div class="topo"><h1>Frequência Escolar</h1>{f"<p>{escape(sub)}</p>" if sub else ""}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def contato_html(c: str) -> str:
+    """Contato em HTML para o alerta (link do WhatsApp quando o número é válido)."""
+    if not c:
+        return "sem contato"
+    base = f"Tel.: {escape(formatar_contato(c))}"
+    link = link_whatsapp(c)
+    return base + (f' · <a href="{escape(link)}" target="_blank" rel="noopener">WhatsApp</a>' if link else " · conferir número")
+
+
 STATUS_UI = ["Presente", "Falta", "Falta Justificada"]
 UI_PARA_DB = dict(zip(STATUS_UI, STATUS_DB))
 DB_PARA_UI = {v: k for k, v in UI_PARA_DB.items()}
-CORES = {"Presente": "#2E7D32", "Falta": "#C62828", "Falta Justificada": "#F9A825"}
+CORES = {"Presente": "#4C8C6B", "Falta": "#B5574B", "Falta Justificada": "#C9A04A"}
 
 # Lista inicial da turma (usada no modo demonstração e como exemplo de importação)
 PLANILHA_PADRAO = Path(__file__).parent / "dados" / "alunos_5_ano_B_tarde_2026.xlsx"
@@ -57,10 +112,10 @@ COLS_FREQ = ["id", "aluno_id", "data", "status", "observacao"]
 def texto_contato(c: str) -> str:
     """Linha de contato para cartões e alertas (com link do WhatsApp quando o número é válido)."""
     if not c:
-        return "📞 sem contato"
-    t = f"📞 {formatar_contato(c)}"
+        return "Tel.: sem contato"
+    t = f"Tel.: {formatar_contato(c)}"
     link = link_whatsapp(c)
-    return t + (f" · [WhatsApp]({link})" if link else " · ⚠️ conferir número")
+    return t + (f" · [WhatsApp]({link})" if link else " · conferir número")
 
 
 # ----------------------------------------------------------------------------
@@ -205,7 +260,7 @@ def checar_senha() -> bool:
         return True  # sem senha configurada -> acesso livre
     if st.session_state.get("autenticado"):
         return True
-    st.title("📋 Frequência Escolar")
+    cabecalho()
     digitada = st.text_input("Senha de acesso", type="password")
     if digitada:
         if hmac.compare_digest(digitada, senha):
@@ -225,22 +280,20 @@ repo, modo = get_repo()
 alunos = repo.listar_alunos()
 freq_all = repo.todas_frequencias()
 
-st.title("📋 Frequência Escolar")
-if not alunos.empty:
-    st.caption("Turma: " + ", ".join(sorted(alunos["turma"].unique())))
+cabecalho(("Turma: " + ", ".join(sorted(alunos["turma"].unique()))) if not alunos.empty else "")
 if modo == "Demonstração":
     st.info("Modo demonstração: a lista de alunos vem da planilha da pasta dados/ e tudo fica só nesta sessão. Configure o Supabase para gravar de verdade.")
 
 if "aviso" in st.session_state:  # mensagem que sobrevive ao st.rerun()
     st.success(st.session_state.pop("aviso"))
 
-tab_chamada, tab_dash, tab_alunos = st.tabs(["📋 Chamada", "📊 Dashboard", "👥 Alunos"])
+tab_chamada, tab_dash, tab_alunos = st.tabs(["Chamada", "Dashboard", "Alunos"])
 
 # ============================ CHAMADA ========================================
 with tab_chamada:
     dia = st.date_input("Data da chamada", date.today(), format="DD/MM/YYYY")
 
-    with st.expander("➕ Adicionar aluno (entrou no meio do ano)"):
+    with st.expander("Adicionar aluno (entrou no meio do ano)"):
         with st.form("form_novo_aluno", clear_on_submit=True):
             nome_novo = st.text_input("Nome do aluno")
             turma_nova = st.text_input("Turma", value=alunos["turma"].mode().iat[0] if not alunos.empty else "Turma A")
@@ -264,7 +317,7 @@ with tab_chamada:
     dias_lancados = freq_all["data"].nunique()
     st.caption(
         f"{len(alunos_dia)} alunos nesta data · dias já lançados: {dias_lancados}"
-        + (" · ✏️ já existe chamada neste dia (salvar atualiza)" if not do_dia.empty else "")
+        + (" · já existe chamada neste dia (salvar atualiza)" if not do_dia.empty else "")
     )
     st.caption("Padrão: Presente. Marque apenas as exceções.")
 
@@ -291,7 +344,7 @@ with tab_chamada:
                     )
                 respostas.append((int(a.id), status, obs.strip()))
 
-            if st.form_submit_button("💾 Salvar frequência do dia", type="primary", width="stretch"):
+            if st.form_submit_button("Salvar frequência do dia", type="primary", width="stretch"):
                 repo.salvar_frequencias(
                     [
                         {"aluno_id": aid, "data": dia.isoformat(), "status": UI_PARA_DB[s], "observacao": o}
@@ -305,14 +358,14 @@ with tab_chamada:
 with tab_dash:
     st.subheader("Dashboard de Evasão")
 
-    with st.expander("⚙️ Regras de risco"):
+    with st.expander("Regras de risco"):
         periodo = st.number_input("Dias do período de análise", 1, 200, 15)
         limite_seq = st.number_input("Faltas seguidas para alerta", 1, 30, 3)
         limite_pct = st.number_input("% de faltas para alerta", 1, 100, 30)
         contar_just = st.checkbox("Contar faltas justificadas no risco", value=False)
 
     if modo == "Demonstração":
-        if st.button("🎲 Gerar 15 dias de exemplo", width="stretch"):
+        if st.button("Gerar 15 dias de exemplo", width="stretch"):
             repo.gerar_exemplo()
             st.rerun()
 
@@ -329,26 +382,34 @@ with tab_dash:
 
         c1, c2 = st.columns(2)
         c1.metric("Alunos", len(alunos))
-        c2.metric("🚨 Em risco", len(em_risco))
+        c2.metric("Em risco", len(em_risco))
         c3, c4 = st.columns(2)
         c3.metric("Presença geral", f"{(freq_all['status'] == 'presente').mean() * 100:.1f}%")
         c4.metric("Abaixo de 75% (LDB)", int(resumo["abaixo_ldb"].sum()))
 
         # --- alerta vermelho
         if em_risco.empty:
-            st.success("✅ Nenhum aluno em risco de evasão pelas regras atuais.")
+            st.markdown('<div class="tudo-bem">Nenhum aluno em risco de evasão pelas regras atuais.</div>',
+                        unsafe_allow_html=True)
         else:
-            linhas = "\n".join(f"- **{r.nome}** — {r.motivo} · {texto_contato(r.contato)}" for r in em_risco.itertuples())
-            st.error(f"🚨 **RISCO DE EVASÃO** ({len(em_risco)} aluno(s))\n\n{linhas}")
+            itens = "".join(
+                f"<li><b>{escape(r.nome)}</b> — {escape(r.motivo)} · {contato_html(r.contato)}</li>"
+                for r in em_risco.itertuples()
+            )
+            st.markdown(
+                f'<div class="alerta"><b class="t">Atenção: risco de evasão ({len(em_risco)} aluno(s))</b>'
+                f"<ul>{itens}</ul></div>",
+                unsafe_allow_html=True,
+            )
 
         # --- gráficos
         g1, g2 = st.columns(2)
         with g1:
-            st.markdown("**Top 10 — quem mais faltou**")
+            st.markdown('<div class="secao">Top 10 — quem mais faltou</div>', unsafe_allow_html=True)
             top = resumo.assign(total=resumo["faltas"] + resumo["justificadas"])
             top = top[top["total"] > 0].nlargest(10, "total")
             if top.empty:
-                st.caption("Ninguém faltou até agora. 🎉")
+                st.caption("Ninguém faltou até agora.")
             else:
                 longo = top.melt(id_vars="nome", value_vars=["faltas", "justificadas"],
                                  var_name="tipo", value_name="qtd")
@@ -358,20 +419,22 @@ with tab_dash:
                              labels={"nome": "", "qtd": "Faltas", "tipo": ""})
                 fig.update_yaxes(autorange="reversed")
                 fig.update_layout(height=60 + 38 * len(top), margin=dict(l=0, r=0, t=10, b=0),
+                                  paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#26332F"),
                                   legend=dict(orientation="h", y=-0.25))
                 st.plotly_chart(fig, width="stretch")
         with g2:
-            st.markdown("**Presente × Falta × Justificada**")
+            st.markdown('<div class="secao">Presente × Falta × Justificada</div>', unsafe_allow_html=True)
             pizza = px.pie(distribuicao_status(freq_all), names="status", values="total",
                            color="status", color_discrete_map=CORES, hole=0.4)
             pizza.update_layout(height=320, margin=dict(l=0, r=0, t=10, b=0),
+                                paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#26332F"),
                                 legend=dict(orientation="h", y=-0.1))
             st.plotly_chart(pizza, width="stretch")
 
         # --- tabela detalhada
-        st.markdown("**Detalhe por aluno**")
+        st.markdown('<div class="secao">Detalhe por aluno</div>', unsafe_allow_html=True)
         tabela = resumo.assign(
-            situacao=resumo["risco"].map({True: "🚨 Risco", False: "✅ OK"})
+            situacao=resumo["risco"].map({True: "Atenção", False: "Regular"})
         )
         tabela["contato"] = tabela["contato"].map(formatar_contato)
         tabela = tabela[["situacao", "nome", "contato", "turma", "dias", "presencas", "faltas", "justificadas",
@@ -379,7 +442,7 @@ with tab_dash:
         tabela.columns = ["Situação", "Aluno", "Contato", "Turma", "Dias", "Presenças", "Faltas", "Justificadas",
                           "Máx. seguidas", "% faltas", "% presença", "Motivo"]
         st.dataframe(tabela, width="stretch", hide_index=True)
-        st.download_button("⬇️ Baixar CSV", tabela.to_csv(index=False).encode("utf-8-sig"),
+        st.download_button("Baixar CSV", tabela.to_csv(index=False).encode("utf-8-sig"),
                            "frequencia_resumo.csv", "text/csv", width="stretch")
 
         st.caption(
@@ -392,14 +455,14 @@ with tab_alunos:
     st.subheader(f"Alunos cadastrados ({len(alunos)})")
     lista = alunos.assign(
         contato_fmt=alunos["contato"].map(formatar_contato),
-        conferir=alunos["contato"].map(lambda c: "⚠️ conferir" if c and not contato_valido(c) else ""),
+        conferir=alunos["contato"].map(lambda c: "conferir" if c and not contato_valido(c) else ""),
     )[["nome", "turma", "contato_fmt", "conferir", "data_entrada"]]
     lista.columns = ["Aluno", "Turma", "Contato", "", "Entrada"]
     st.dataframe(lista, width="stretch", hide_index=True)
     st.caption("Para incluir um aluno novo, use “Adicionar aluno” na aba Chamada.")
 
     st.divider()
-    st.markdown("**📥 Importar lista da turma (.xlsx ou .csv)**")
+    st.markdown("**Importar lista da turma (.xlsx ou .csv)**")
     arq = st.file_uploader("Planilha com as colunas “NOME DO ALUNO” e “CONTATO”", type=["xlsx", "csv"])
     if arq is not None:
         try:
