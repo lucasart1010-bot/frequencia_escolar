@@ -32,13 +32,13 @@ st.markdown(
         --fundo: #F6F5F1; --cartao: #FFFFFF; --borda: #E3E0D8; --texto: #26332F;
         --suave: #6B7770; --verde: #2F6B6B; --ok: #4C8C6B; --falta: #B5574B; --just: #C9A04A;
     }
-    .block-container {max-width: 1000px; padding: 1.4rem 1rem 4rem 1rem;}
+    .block-container {max-width: 1000px; padding: 4.5rem 1rem 4rem 1rem;}
     footer, #MainMenu {visibility: hidden;}
     html, body, [class*="css"] {font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;}
 
     /* cabeçalho */
     .topo {border-bottom: 1px solid var(--borda); padding: .2rem 0 .9rem 0; margin-bottom: 1rem;}
-    .topo h1 {font-size: 1.7rem; font-weight: 650; margin: 0; padding: 0; color: var(--texto); letter-spacing: -.01em;}
+    .topo h1 {font-size: 1.7rem; font-weight: 650; margin: 0; padding: .2rem 0 0 0; line-height: 1.3; color: var(--texto); letter-spacing: -.01em;}
     .topo p {margin: .15rem 0 0 0; color: var(--suave); font-size: .92rem;}
 
     /* abas */
